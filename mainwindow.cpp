@@ -27,14 +27,49 @@ MainWindow::MainWindow(QWidget *parent) :
 	}
 
 	//try out the stereo vision blackbox
-	StereoVisionBlackBox svbox( ((Mat)calibImgs1[0]).rows, ((Mat)calibImgs1[0]).cols);
-	qDebug() << "adding calibration images: "
-			 << svbox.addCalibrationImages(calibImgs1, calibImgs2, Size(12,12));
-	qDebug() << "calibrating stereo cameras: "
-			 << svbox.calibrateCameras(true);
+	svbox = new StereoVisionBlackBox( ((Mat)calibImgs1[0]).rows, ((Mat)calibImgs1[0]).cols);
+//	qDebug() << "adding calibration images for stereo camera rig: "
+//			 << svbox->addCalibrationImages(calibImgs1, calibImgs2, Size(12,12), CALIB_STEREO_CAMERAS);
+//	qDebug() << "calibrating stereo cameras: "
+//			 << svbox->calibrateCameras();
+
+//	qDebug() << "saving calibration file: " << svbox->saveCalibration("calibfile.clb");
+	qDebug() << "loading calibration file: " << svbox->loadCalibration("calibfile.clb");
+
+
+	testL = calibImgs1[4];
+	testR = calibImgs2[4];
+	showDisp();
 }
 
 MainWindow::~MainWindow()
 {
 	delete ui;
+}
+
+void MainWindow::showDisp()
+{
+	Mat rectL, rectR;
+	Mat disp = svbox->getDisparityMap(testL, testR, &rectL, &rectR);
+	Mat disp8bit;
+	double min, max;
+	minMaxLoc(disp, &min, &max);
+	disp.convertTo(disp8bit, CV_8UC1, 255.0 / max);
+	imshow("original rectified left image", rectR);
+	imshow("original rectified right image", rectR);
+	imshow("disparity image", disp8bit);
+}
+
+void MainWindow::on_slider_maxDisp_valueChanged(int value)
+{
+	svbox->setStereoMatchingParameters(value);
+	qDebug() << " max disp: " << value;
+	showDisp();
+}
+
+void MainWindow::on_slider_SADwindow_valueChanged(int value)
+{
+	svbox->setStereoMatchingParameters(-1, value);
+	qDebug() << " SAD windows: " << value;
+	showDisp();
 }

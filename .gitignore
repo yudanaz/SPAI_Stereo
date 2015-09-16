@@ -39,7 +39,8 @@ Thumbs.db
 # Qt Creator File(s) #
 ######################
 *.pro
-*.pro.user
+*.user
+*.16
 
 # Images # 
 ##########

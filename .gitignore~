@@ -35,3 +35,20 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Qt Creator File(s) #
+######################
+*.pro
+*.pro.user
+
+# Images # 
+##########
+*.png
+*.jpg
+*.PNG
+*.JPG
+*.JPEG
+*.jpeg
+*.tif
+*.bmp
+*.gif
