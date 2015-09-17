@@ -8,7 +8,7 @@ using namespace cv;
 using namespace std;
 
 enum StereoMatchingAlgorithm{ BLOCK_MATCHING, SEMI_GLOBAL_BLOCK_MATCHING };
-enum CalibrationImageType{ CALIB_SINGLE_CAMERAS, CALIB_STEREO_CAMERAS };
+enum CalibrationImageType{ CALIB_IMGS_SINGLE_CAMS, CALIB_IMGS_STEREO_CAMS };
 
 class StereoVisionBlackBox
 {
@@ -32,8 +32,15 @@ public:
 	/// \param calibType: Defines if images for single camera calibration or stereo camera rig calibration are passed to this method.
 	/// \return True if successfull.
 	///
-	bool addCalibrationImages(vector<Mat> leftImgs, vector<Mat> rightImgs, Size chessboardSize,
-							  CalibrationImageType calibType);
+	bool addCalibrationImages(vector<Mat> leftImgs, vector<Mat> rightImgs, CalibrationImageType calibType);
+
+	///
+	/// \brief Overloaded method that allows to add calibration images by providing a containing folder.
+	/// \param leftImageFolder
+	/// \param rightImageFolder
+	/// \return
+	///
+	bool addCalibrationImages(QString leftImageFolder, QString rightImageFolder, CalibrationImageType calibType);
 
 	///
 	/// \brief Allows to add a single pair of calibration images for left and right camera.
@@ -47,8 +54,7 @@ public:
 	/// \param calibType: Defines if images for single camera calibration or stereo camera rig calibration are passed to this method.
 	/// \return True if successfull.
 	///
-	bool addCalibrationImagePair(Mat leftImg, Mat rightImg, Size chessboardSize,
-								 CalibrationImageType calibType);
+	bool addCalibrationImagePair(Mat leftImg, Mat rightImg, CalibrationImageType calibType);
 
 	///
 	/// \brief Empties the vector list containing calibration images.
@@ -65,7 +71,7 @@ public:
 	/// The idea behind this is that for areas that don't have corresponding image information in both image, depth cannot be detected.
 	/// \return False if: 1) less thann 8 calibration images have been supplied or 2) the chessboard could be detected in less then 8 images.
 	///
-	bool calibrateCameras(bool crop2commonArea = true);
+	bool calibrateCameras(Size chessboardSize, bool crop2commonArea = true);
 
 	///
 	/// \brief Saves the stereo camera calibration parameters (i.e. undistort and rectify maps) to a file
@@ -117,6 +123,14 @@ public:
 
 	void setStereoMatchingAlgorithm(StereoMatchingAlgorithm type = SEMI_GLOBAL_BLOCK_MATCHING){ algorithm = type; }
 
+	///
+	/// \brief Computes the rectified image from the original image, for left or right camera.
+	/// \param img: The original image.
+	/// \param leftOrRight01: Set 0 for left and else for right image.
+	/// \return
+	///
+	Mat getRectifiedImage(Mat img, int leftOrRight01);
+
 	Mat getDepthInCentimenters();
 
 	///
@@ -129,14 +143,9 @@ public:
 	void calibrateDepthMetric(Mat image, int centimeters2CentralPixel);
 
 	///
-	/// \brief Returns true if the cameras have been calibrated separately with dedicated calibration images.
-	///
-	bool singleCamerasCalibrated(){ return this->singleCamsCalibrated; }
-
-	///
 	/// \brief Returns true if cameras have already been successfully calibrated as a stereo camera rig.
 	///
-	bool stereoCamerasCalibrated(){ return this->stereoCamsCalibrated; }
+	bool isCalibrated(){ return this->stereoCamsCalibrated; }
 
 	///
 	/// \brief Returns true if the depth metric has been calibrated

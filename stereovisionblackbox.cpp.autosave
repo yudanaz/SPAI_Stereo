@@ -310,6 +310,7 @@ void StereoVisionBlackBox::setStereoMatchingParameters(int nrOfDisparities, int 
 
 Mat StereoVisionBlackBox::getRectifiedImage(Mat img, int leftOrRight01)
 {
+	if(!stereoCamsCalibrated){ return M }
 	Mat img_;
 	if(leftOrRight01 == 0)
 	{ remap(img, img_, rectifyMaps1[0], rectifyMaps1[1], INTER_LINEAR, BORDER_CONSTANT, Scalar()); }
