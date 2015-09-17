@@ -1,9 +1,11 @@
 #include "stereovisionblackbox.h"
 #include <QDir>
 #include <QDebug>
+#include <QList>
 
 StereoVisionBlackBox::StereoVisionBlackBox(int rows, int cols)
-	: singleCamsCalibrated(false), stereoCamsCalibrated(false), metricCalibrated(false), channels(3), algorithm(SEMI_GLOBAL_BLOCK_MATCHING)
+	: singleCamsCalibrated(false), stereoCamsCalibrated(false), channels(3), algorithm(SEMI_GLOBAL_BLOCK_MATCHING),
+	  metricCalibrated(false), mapping_m(0), mapping_b(0)
 {
 	this->cols = cols;
 	this->rows = rows;
@@ -310,12 +312,74 @@ void StereoVisionBlackBox::setStereoMatchingParameters(int nrOfDisparities, int 
 
 Mat StereoVisionBlackBox::getRectifiedImage(Mat img, int leftOrRight01)
 {
+	if(!stereoCamsCalibrated){ return Mat(); }
 	Mat img_;
 	if(leftOrRight01 == 0)
 	{ remap(img, img_, rectifyMaps1[0], rectifyMaps1[1], INTER_LINEAR, BORDER_CONSTANT, Scalar()); }
 	else
 	{ remap(img, img_, rectifyMaps2[0], rectifyMaps2[1], INTER_LINEAR, BORDER_CONSTANT, Scalar()); }
 	return img_;
+}
+
+Mat StereoVisionBlackBox::getDepthInCentimenters(Mat left, Mat right,
+												 Mat *out_left_rectified, Mat *out_right_rectified)
+{
+	if(!metricCalibrated){ return Mat(); }
+	Mat disp = getDisparityMap(left, right, out_left_rectified, out_right_rectified);
+	Mat depthInCM(disp.size(), CV_16UC1);
+	for (int y = 0; y < disp.rows; ++y)
+	{
+		for (int x = 0; x < disp.cols; ++x)
+		{
+			depthInCM.at<ushort>(y,x) = disp.at<ushort>(y,x) * mapping_m + mapping_b;
+		}
+	}
+	return depthInCM;
+}
+
+void StereoVisionBlackBox::calibrateDepthMetric(Mat depth, Point pixel, int centimeters2Pixel)
+{
+	//get median value in 5x5 neighborhood around pixel
+	QList<ushort> list;
+	for (int y = pixel.y-2; y <= pixel.y+2; ++y)
+	{
+		for (int x = pixel.x-2; x <= pixel.x+2; ++x)
+		{
+			list.append(depth.at<ushort>(y,x));
+		}
+	}
+	std::sort(list.begin(), list.end());
+	ushort v = list[12];
+
+	//add value pair
+	mapping_values.push_back(Point(v, centimeters2Pixel));
+
+	//if enough points have been added (>=2), compute m and b every pair and average
+	int cnt = 0;
+	if(mapping_values.size() >= 2)
+	{
+		for (uint i = 0; i < mapping_values.size(); ++i)
+		{
+			for (uint j = i+1; j < mapping_values.size(); ++j)
+			{
+				double m, b;
+				getLinearFunc(mapping_values[i], mapping_values[j], &m, &b);
+				mapping_m += m;
+				mapping_b += b;
+				cnt++;
+			}
+		}
+		mapping_b /= (double)cnt;
+		mapping_m /= (double)cnt;
+
+		metricCalibrated = true;
+	}
+}
+
+void StereoVisionBlackBox::resetMetricCalibration()
+{
+	mapping_values.clear();
+	metricCalibrated = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -341,4 +405,10 @@ Mat StereoVisionBlackBox::checkForGrayScale(Mat img)
 		return img_;
 	}
 	return img;
+}
+
+void StereoVisionBlackBox::getLinearFunc(Point p1, Point p2, double *m, double *b)
+{
+	*m = (p2.y - p1.y) / (p2.x - p1.x);
+	*b = p1.y - (*m * p1.x);
 }

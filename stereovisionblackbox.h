@@ -131,16 +131,27 @@ public:
 	///
 	Mat getRectifiedImage(Mat img, int leftOrRight01);
 
-	Mat getDepthInCentimenters();
+	///
+	/// \brief Computes a real-world depth image based on the previously computed mapping function.
+	/// \return A 16bit (ushort) image containing real-world depth values in cm.
+	/// If mapping function has not been computed, returns empty matrix.
+	///
+	Mat getDepthInCentimenters(Mat left, Mat right, Mat *out_left_rectified, Mat *out_right_rectified);
 
 	///
 	/// \brief Calibrates the depth metric, i.e. informs the algorithm which disparity value correspondends to
 	/// which real-world depth in centimeters, i.e. distance from the camera.
-	/// At least two images for different depths have to be supplied. A linear mapping is computed.
-	/// \param image: An image in which the central pixel's depth is mapped to the supplied value.
-	/// \param centimeters2CentralPixel: The value to which the central pixel's depth is mapped.
+	/// At least two images for different depths have to be supplied before the linear mapping function can be computed.
+	/// \param depth: A 16 bit depth image in which the selected pixel's depth is mapped to the supplied value.
+	/// \param pixel: The pixel for which a real-world depth is supplied.
+	/// \param centimeters2Pixel: The value to which the selected pixel's depth is mapped.
 	///
-	void calibrateDepthMetric(Mat image, int centimeters2CentralPixel);
+	void calibrateDepthMetric(Mat depth, Point pixel, int centimeters2Pixel);
+
+	///
+	/// \brief Resets the metric calibration, i.e. all collected points are deleted and flag is set to "metric not calibrated".
+	///
+	void resetMetricCalibration();
 
 	///
 	/// \brief Returns true if cameras have already been successfully calibrated as a stereo camera rig.
@@ -155,6 +166,7 @@ public:
 private:
 	void updateRectifyMaps(Mat rectif1x, Mat rectif1y, Mat rectif2x, Mat rectif2y);
 	Mat checkForGrayScale(Mat img);
+	void getLinearFunc(Point p1, Point p2, double *m, double *b);
 
 	int cols;
 	int rows;
@@ -168,11 +180,15 @@ private:
 	vector<Mat> rectifyMaps2;
 	bool singleCamsCalibrated;
 	bool stereoCamsCalibrated;
-	bool metricCalibrated;
 	StereoBM sbm;
 	StereoSGBM sgbm;
 	int channels;
 	StereoMatchingAlgorithm algorithm;
+
+	bool metricCalibrated;
+	double mapping_m;
+	double mapping_b;
+	vector<Point> mapping_values;
 };
 
 #endif // STEREOVISIONBLACKBOX_H

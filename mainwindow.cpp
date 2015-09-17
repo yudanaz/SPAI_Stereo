@@ -46,6 +46,13 @@ MainWindow::MainWindow(QWidget *parent) :
 //	testR = calibImgs2[4];
 	testL = imread("/home/maurice/Qt_Projects/build-SPAI_StereoDev-Desktop_Qt_5_2_1_GCC_64bit-Debug/Calibration/Left_jpg/Left15.jpg", IMREAD_GRAYSCALE);
 	testR = imread("/home/maurice/Qt_Projects/build-SPAI_StereoDev-Desktop_Qt_5_2_1_GCC_64bit-Debug/Calibration/Right_jpg/Right15.jpg", IMREAD_GRAYSCALE);
+
+	//fake settin real world metric
+	Mat rectL, rectR;
+	Mat disp = svbox->getDisparityMap(testL, testR, &rectL, &rectR);
+	svbox->calibrateDepthMetric(disp, Point(100,100), 56);
+	svbox->calibrateDepthMetric(disp, Point(300,300), 180);
+
 	if(svbox->isCalibrated())
 	{
 		showDisp();
@@ -61,13 +68,17 @@ void MainWindow::showDisp()
 {
 	Mat rectL, rectR;
 	Mat disp = svbox->getDisparityMap(testL, testR, &rectL, &rectR);
-	Mat disp8bit;
+	Mat cm = svbox->getDepthInCentimenters(testL, testR, &rectL, &rectR);
+	Mat disp8bit, cm8bit;
 	double min, max;
 	minMaxLoc(disp, &min, &max);
 	disp.convertTo(disp8bit, CV_8UC1, 255.0 / max);
+	minMaxLoc(cm, &min, &max);
+	disp.convertTo(cm8bit, CV_8UC1, 255.0 / max);
 //	imshow("original rectified left image", rectR);
 //	imshow("original rectified right image", rectR);
 	imshow("disparity image", disp8bit);
+	imshow("centimeter image", cm8bit);
 }
 
 void MainWindow::on_slider_maxDisp_valueChanged(int value)
